@@ -1,7 +1,7 @@
 "use strict";
 
 // Configuration
-const BACKEND_URL = "http://localhost:3000";
+const BACKEND_URL = "https://gemini-ai-chatbot-backend-a7yo.onrender.com";
 
 // Auto-generated prompt suggestions
 const PROMPT_SUGGESTIONS = [
@@ -244,38 +244,50 @@ function showTypingIndicator() {
   return { div: typingDiv, id: messageId };
 }
 
+
+//format bot response
+function formatBotResponse(text) {
+  if (!text) return "";
+
+  let formatted = text;
+
+  // Convert **bold** to <strong>
+  formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+
+  // Convert *italic* to <em> (optional)
+  formatted = formatted.replace(/\*(.*?)\*/g, "<em>$1</em>");
+
+  // Remove leftover stray asterisks
+  formatted = formatted.replace(/\*/g, "");
+
+  // Convert line breaks
+  formatted = formatted.replace(/\n/g, "<br>");
+
+  return formatted;
+}
+
+
 // Type text with animation
-function typeText(element, text, speed = 30) {
+function typeText(element, html, speed = 30) {
   return new Promise((resolve) => {
     let index = 0;
     element.innerHTML = "";
 
     function typeCharacter() {
-      if (index < text.length) {
-        const char = text.charAt(index);
-
-        // Handle special characters and formatting
-        if (char === "\n") {
-          element.innerHTML += "<br>";
-        } else if (char === " " && text.charAt(index + 1) === " ") {
-          element.innerHTML += "&nbsp;&nbsp;";
-          index++;
+      if (index < html.length) {
+        // If we're at an HTML tag, insert it instantly
+        if (html[index] === "<") {
+          const tagEnd = html.indexOf(">", index);
+          element.innerHTML += html.slice(index, tagEnd + 1);
+          index = tagEnd + 1;
         } else {
-          element.innerHTML += escapeHtml(char);
+          element.innerHTML += html[index];
+          index++;
         }
 
-        index++;
-
-        // Scroll as text appears
-        if (index % 10 === 0) {
-          scrollToBottom();
-        }
-
-        // Random speed variation for natural feel
-        const delay = speed + (Math.random() * 20 - 10);
-        setTimeout(typeCharacter, delay);
-      } else {
         scrollToBottom();
+        setTimeout(typeCharacter, speed);
+      } else {
         resolve();
       }
     }
@@ -380,7 +392,8 @@ async function sendMessage(messageText, regenerate = false) {
     const messageContent = botMessageDiv.querySelector(".message-content");
 
     // Type the response
-    await typeText(messageContent, data.response);
+   const formattedResponse = formatBotResponse(data.response);
+   await typeText(messageContent, formattedResponse);
 
     // Store in conversation
     state.conversation.push({
